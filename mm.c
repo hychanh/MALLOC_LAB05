@@ -94,6 +94,9 @@ void *mm_malloc(size_t size)
 */
 void mm_free(void *ptr)
 {
+	void* ptr = CAST_TO_BYTE_POINTER(ptr)-WORDSIZE;
+	ptr = join(ptr);
+	push_front(ptr);
 }
 
 /*
@@ -193,10 +196,30 @@ void* join(void*pointer)
 		PUT(next_footer_ptr,COMBINE(newsize,0));
 	}
 	/*Check if prev block is free,coalescene and fix link*/
-	
-	
+	void* prev_footer_ptr = CAST_TO_BYTE_POINTER(pointer)-WORDSIZE;
+	isallocated = GETSIZE(prev_footer_ptr) & 1;
+	void* prev_header_ptr = CAST_TO_BYTE_POINTER(prev_footer_ptr) - (GETSIZE(prev_footer_ptr) - WORDSIZE);
+	if(isallocated == 0)
+	{
+		void *tmp_ptr = *(CAST_TO_BYTE_POINTER(prev_header_ptr)+WORDSIZE); //get pnext of prev block
+		void* tmp_ptr_1 = *(CAST_TO_BYTE_POINTER(prev_header_ptr)+2*WORDSIZE); //get pprev of prev block
+		void* tmp_ptr_2 = *(CAST_TO_BYTE_POINTER(tmp_ptr_1)+WORDSIZE);
+		void* tmp_ptr_3 = *(CAST_TO_BYTE_POINTER(tmp_ptr)+2*WORDSIZE);
+		tmp_ptr_2 = *(CAST_TO_BYTE_POINTER(prev_header_ptr)+WORDSIZE);
+		tmp_ptr_3 = *(CAST_TO_BYTE_POINTER(prev_header_ptr)+2*WORDSIZE);
+		int newsize = GETSIZE(pointer)+GETSIZE(prev_header_ptr);
+		PUT(prev_header_ptr,COMBINE(newsize,0));
+		PUT(CAST_TO_BYTE_POINTER(prev_header_ptr)+newsize - WORDSIZE,COMBINE(newsize,0));
+		pointer = prev_header_ptr;
+	}
+	return pointer;
 }
-
+void push_front(void* pointer)
+{
+	PUT(CAST_TO_BYTE_POINTER(pointer) + WORDSIZE,free_pHead);
+	PUT(CAST_TO_BYTE_POINTER(pointer) + 2*WORDSIZE,0x0);
+	free_pHead = pointer;
+}
 
 
 
